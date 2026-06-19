@@ -1,0 +1,15 @@
+{
+  "allowedTools": {
+    "Read": true,
+    "Write": true,
+    "Edit": true,
+    "Glob": true,
+    "Grep": true,
+    "Bash": true,
+    "Agent": true,
+    "TaskCreate": true,
+    "TaskUpdate": true,
+    "TaskList": true
+  },
+  "hooks": {}
+}
