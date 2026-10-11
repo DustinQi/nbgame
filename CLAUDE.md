@@ -49,4 +49,4 @@
 | 建目录 / 写提交信息 / 开分支 | `docs/agent_docs/项目约定.md` |
 | 了解当前进度、决策记录 | `docs/项目进度.md` |
 
-**技能命名约定**：Skill 名保持英文原样（如 `ecc:code-review`、`superpowers:brainstorming`），王总用中文触发调用即可。
+**技能命名约定**：Skill 名保持英文原样（如 `superpowers:brainstorming`），王总用中文触发调用即可。
