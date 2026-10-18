@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **当前迭代说明（2026-10-18）：** 王总决定先只做原计划中的前两个基础任务（测试框架 + 输入映射），拆细后的执行计划见 `docs/superpowers/plans/2026-10-18-jiayue-cloud-foundation-plan.md`。本文件保留为后续完整原型的路线图；基础部分完成后，再按需把后续任务拆成小批次执行。
+
 **Goal:** 在 Godot 4.7.2 中用 GDScript 做出「第一人称移动 + 投掷武器 + 可击杀目标 + HUD」的最小可玩原型。
 
 **Architecture:** 采用节点组件化：`CharacterBody3D` 玩家负责移动与视角，`WeaponManager` 节点负责冷却与投掷，`RigidBody3D` 投掷物负责飞行与命中，`StaticBody3D` 目标假人负责承伤与死亡，`Arena` 负责统计剩余目标与清场信号，`HUD` 负责显示。纯逻辑（属性、冷却、伤害）放在 `RefCounted` 类里，用无界面测试脚本验证；场景与手感由王总运行游戏试玩验证。
