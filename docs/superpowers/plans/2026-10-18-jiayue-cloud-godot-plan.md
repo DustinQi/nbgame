@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **当前迭代说明（2026-10-18）：** 王总决定先只做原计划中的前两个基础任务（测试框架 + 输入映射），拆细后的执行计划见 `docs/superpowers/plans/2026-10-18-jiayue-cloud-foundation-plan.md`。本文件保留为后续完整原型的路线图；基础部分完成后，再按需把后续任务拆成小批次执行。
+> **当前迭代说明（2026-10-18）：** 当前迭代只做「工程地基 + 可视化移动验收」：测试框架、常量、输入映射、玩家第一人称移动和一个能走动的空场地，不含投掷、敌人和 HUD。拆细后的执行计划见 `docs/superpowers/plans/2026-10-18-jiayue-cloud-foundation-plan.md`。本文件保留为后续完整原型的路线图，等移动验收通过后再按需拆后续任务。
 
 **Goal:** 在 Godot 4.7.2 中用 GDScript 做出「第一人称移动 + 投掷武器 + 可击杀目标 + HUD」的最小可玩原型。
 

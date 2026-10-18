@@ -1,14 +1,14 @@
-# 嘉悦云上 Godot 工程地基实现计划（测试框架 + 输入映射）
+# 嘉悦云上 Godot 工程地基与可视化移动验收计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 建立自动运行的 headless 测试体系、集中管理游戏常量、注册 WASD / 跳跃 / 投掷六个输入动作，为下一步的玩家和武器开发打好地基。
+**Goal:** 先建立自动测试体系、游戏常量和六个输入动作，再做出「玩家第一人称移动 + 一个能走动的空场地」，让王总可以直接打开游戏窗口，用画面验收移动、跳跃和视角手感。
 
-**Architecture:** 本次只写纯 GDScript 逻辑，不创建任何游戏场景。一个 `SceneTree` 测试运行器自动发现 `tests/test_*.gd` 并逐个执行；测试文件通过 `preload` 引用被测脚本，避免依赖 Godot 的全局类名缓存。输入动作名称统一放在 `InputSetup` 常量里，后续玩家脚本直接复用，避免拼写不一致。
+**Architecture:** 前九个任务只写纯 GDScript 逻辑，不碰场景；后三个任务加入玩家场景（`CharacterBody3D` + 相机）和一个最小的 30 米见方场地（地面、四面墙、天空、灯光），并交给王总试玩。玩家脚本用 `preload` 引用常量和输入脚本，避免依赖 Godot 的全局类名缓存。本次不做投掷、敌人和 HUD，这些留到下一份计划。
 
-**Tech Stack:** Godot 4.7.2 stable、GDScript、headless 命令行测试。
+**Tech Stack:** Godot 4.7.2 stable、GDScript、文本场景 `.tscn`、headless 命令行测试。
 
-**Spec:** `docs/superpowers/specs/2026-08-02-jiayue-cloud-design.md`（本次只落实工程约定与输入部分；玩法实现见后续计划）
+**Spec:** `docs/superpowers/specs/2026-08-02-jiayue-cloud-design.md`（本次落实工程约定、输入和第一人称移动；投掷与战斗后续实现）
 
 ## Global Constraints
 
@@ -17,19 +17,22 @@
 - 命名规范：类名 PascalCase；函数和变量 snake_case；私有成员 `_` 前缀；每个方法不超过 50 行；关键逻辑写中文注释。
 - 输入动作固定为六个：`move_forward`、`move_back`、`move_left`、`move_right`、`jump`、`throw`。
 - WASD 使用 `physical_keycode`（物理键位），保证非 QWERTY 键盘布局下位置不变。
+- 玩家数值：移动速度 6 m/s，跳跃初速度 8 m/s，重力 24 m/s²，鼠标灵敏度 0.0025。
+- 碰撞层约定：第 1 层 = 玩家，第 2 层 = 场景（地面/墙）；玩家 `collision_layer = 1`、`collision_mask = 2`，地面和墙 `collision_layer = 2`。
+- 玩家出生点必须在场地之内、地面之上，不能一进游戏就掉下去或卡在半空。
 - 测试统一从 `game/test.sh` 进入；任何测试失败时，脚本必须返回非零退出码。
-- 本次改动不涉及场景、玩家、武器或 HUD，这些留给后续计划。
+- 本次改动不涉及投掷、敌人、生命值和 HUD。
 - 提交信息格式：`feat/fix/refactor/docs: <中文描述>`，结尾追加 `Co-Authored-By: Claude Code <noreply@anthropic.com>`。
 
 ## Review Focus
 
-以下五类问题最可能让这次地基白做，或者让后面的任务踩坑：
+以下五类问题最可能让这次地基白做，或者让王总的第一次画面验收体验变差：
 
 1. **测试失败却返回成功（假绿）**：如果测试脚本在失败时仍然退出码为 0，后面所有“测试通过”都不可信。由 Task 1 故意制造一次失败并检查退出码来锁定。
-2. **重复初始化导致一键绑两次**：玩家和武器管理器的 `_ready()` 都会调用 `InputSetup.ensure_actions()`，如果重复调用会往同一个动作里追加重复按键，按一次键可能触发两次。由 Task 9 的重复初始化测试锁定。
-3. **动作名拼写不一致**：测试里写 `move_forward`、游戏代码里写 `moveForward`，运行时就会“按键没反应”。本次用 `InputSetup` 的动作名常量统一，测试也引用常量，不手写字符串。
-4. **非 QWERTY 键盘布局下 WASD 错位**：用 `keycode` 会按字符位置绑定，用 `physical_keycode` 才按物理位置绑定。Task 5、6 的测试断言 `physical_keycode`。
-5. **从其他目录运行测试脚本找不到项目**：`test.sh` 必须自己切换到脚本所在目录，否则 `res://` 和 `--path` 都会指错地方。Task 2 从 `/tmp` 目录运行一次来验证。
+2. **一进游戏就掉出地面或卡在半空**：玩家出生点、胶囊碰撞体、地面碰撞体的高度只要差一点，画面就会立刻穿帮。Task 11 的测试检查地面碰撞体存在、玩家出生高度大于 0，Task 12 由王总实际试玩确认不会掉落。
+3. **鼠标转视角方向反了或太灵敏**：左右反向、上下颠倒、灵敏度太高都会让第一人称非常难受。Task 12 给王总的试玩步骤会专门检查上下左右方向。
+4. **重复初始化导致一键绑两次**：玩家脚本的 `_ready()` 会调用 `InputSetup.ensure_actions()`，如果以后别的脚本也调用，重复调用会往同一个动作里追加重复按键。Task 9 的重复初始化测试锁定这一点。
+5. **非 QWERTY 键盘布局下 WASD 错位**：用 `keycode` 会按字符位置绑定，用 `physical_keycode` 才按物理位置绑定。Task 5、6 的测试断言 `physical_keycode`。
 
 ---
 
@@ -38,14 +41,24 @@
 ```
 game/
 ├── test.sh                            # 一键运行全部测试（Task 2）
-├── scripts/core/
-│   ├── game_constants.gd              # 游戏常量（Task 3、4）
-│   └── input_setup.gd                 # 输入动作注册（Task 5-9）
+├── run.sh                             # 一键打开游戏窗口（Task 12）
+├── project.godot                      # 已存在，主场景指向 res://scenes/main.tscn
+├── scenes/
+│   ├── main.tscn                      # 最小可走场地（Task 11）
+│   └── player/player.tscn             # 玩家场景（Task 10）
+├── scripts/
+│   ├── core/
+│   │   ├── game_constants.gd          # 游戏常量（Task 3、4）
+│   │   └── input_setup.gd             # 输入动作注册（Task 5-9）
+│   └── player/
+│       └── player_controller.gd       # 第一人称移动与视角（Task 10）
 └── tests/
     ├── test_runner.gd                 # 测试运行器（Task 1）
     ├── test_smoke.gd                  # 测试框架自检（Task 1）
     ├── test_game_constants.gd         # 常量测试（Task 3、4）
-    └── test_input_setup.gd            # 输入动作测试（Task 5-9）
+    ├── test_input_setup.gd            # 输入动作测试（Task 5-9）
+    ├── test_player_scene.gd           # 玩家场景结构测试（Task 10）
+    └── test_main_scene.gd             # 场地结构测试（Task 11）
 ```
 
 ---
@@ -722,7 +735,7 @@ func _check_single_binding(t, action: StringName) -> void:
 并在 `run(t)` 末尾增加：
 
 ```gdscript
-    # 玩家和武器管理器都会调用 ensure_actions，重复调用不能重复绑定
+    # 玩家脚本的 _ready() 也会调用 ensure_actions，重复调用不能重复绑定
     INPUT_SETUP.ensure_actions()
     _check_single_binding(t, INPUT_SETUP.ACTION_MOVE_FORWARD)
     _check_single_binding(t, INPUT_SETUP.ACTION_MOVE_BACK)
@@ -783,16 +796,375 @@ git commit -m "fix: 输入动作重复初始化不再重复绑定" -m "Co-Author
 
 ---
 
-### Task 10: 整体验收与进度记录
+### Task 10: 玩家场景与第一人称控制
 
 **Files:**
+- Create: `game/scripts/player/player_controller.gd`
+- Create: `game/scenes/player/player.tscn`
+- Create: `game/tests/test_player_scene.gd`
+
+**Interfaces:**
+- Consumes: `GameConstants`（Task 3、4）、`InputSetup`（Task 5-9），均通过 `preload` 引用
+- Produces: `class_name PlayerController extends CharacterBody3D`；节点结构 `Player/Head/Camera3D`；玩家在组 `player` 中；玩家 `collision_layer = 1`、`collision_mask = 2`。本次玩家不带武器和生命值，只负责走动、跳跃和转视角。
+
+- [ ] **Step 1: 写失败测试**
+
+创建 `game/tests/test_player_scene.gd`：
+
+```gdscript
+extends RefCounted
+
+# 验证玩家场景的节点结构和碰撞设置
+func run(t) -> void:
+    var packed: PackedScene = load("res://scenes/player/player.tscn")
+    t.check(packed != null, "玩家场景可加载")
+    if packed == null:
+        return
+    var player = packed.instantiate()
+    t.root.add_child(player)
+    t.check(player is CharacterBody3D, "玩家是 CharacterBody3D")
+    t.check(player.get_node_or_null("CollisionShape3D") is CollisionShape3D, "玩家有碰撞体")
+    t.check(player.get_node_or_null("Head/Camera3D") is Camera3D, "有第一人称相机")
+    t.check_equal(player.collision_layer, 1, "玩家在玩家层")
+    t.check_equal(player.collision_mask, 2, "玩家会与场景碰撞")
+    player.free()
+```
+
+- [ ] **Step 2: 运行测试，确认失败**
+
+```bash
+/Volumes/work/repo/nbgame/game/test.sh
+echo "退出码: $?"
+```
+
+预期：玩家场景不存在，`玩家场景可加载` 一条失败，`通过 38，失败 1`，退出码 1。
+
+- [ ] **Step 3: 写玩家脚本**
+
+创建 `game/scripts/player/player_controller.gd`：
+
+```gdscript
+class_name PlayerController
+extends CharacterBody3D
+
+# 用 preload 引用常量和输入脚本，避免依赖全局类名缓存
+const GAME_CONSTANTS = preload("res://scripts/core/game_constants.gd")
+const INPUT_SETUP = preload("res://scripts/core/input_setup.gd")
+
+const PITCH_MIN := -1.45
+const PITCH_MAX := 1.45
+
+@onready var camera: Camera3D = get_node_or_null("Head/Camera3D") as Camera3D
+
+var _pitch := 0.0
+
+func _ready() -> void:
+    INPUT_SETUP.ensure_actions()
+    # 无界面测试时不捕获鼠标
+    if DisplayServer.get_name() != "headless":
+        Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+# 鼠标视角、点击重新捕获、Esc 释放
+func _unhandled_input(event: InputEvent) -> void:
+    # 鼠标释放状态下点击窗口，重新捕获鼠标，但这一下不触发游戏操作
+    if event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+        Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+        get_viewport().set_input_as_handled()
+        return
+    if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+        rotate_y(-event.relative.x * GAME_CONSTANTS.MOUSE_SENSITIVITY)
+        _pitch = clampf(
+            _pitch - event.relative.y * GAME_CONSTANTS.MOUSE_SENSITIVITY,
+            PITCH_MIN,
+            PITCH_MAX
+        )
+        if camera != null:
+            camera.rotation.x = _pitch
+    elif event.is_action_pressed("ui_cancel"):
+        Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+# 第一人称移动与跳跃
+func _physics_process(delta: float) -> void:
+    if not is_on_floor():
+        velocity.y -= GAME_CONSTANTS.GRAVITY * delta
+    if Input.is_action_just_pressed(INPUT_SETUP.ACTION_JUMP) and is_on_floor():
+        velocity.y = GAME_CONSTANTS.JUMP_VELOCITY
+
+    var input_dir := Input.get_vector(
+        INPUT_SETUP.ACTION_MOVE_LEFT,
+        INPUT_SETUP.ACTION_MOVE_RIGHT,
+        INPUT_SETUP.ACTION_MOVE_FORWARD,
+        INPUT_SETUP.ACTION_MOVE_BACK
+    )
+    var direction := (transform.basis * Vector3(input_dir.x, 0.0, input_dir.y)).normalized()
+    if direction.length_squared() > 0.0:
+        velocity.x = direction.x * GAME_CONSTANTS.WALK_SPEED
+        velocity.z = direction.z * GAME_CONSTANTS.WALK_SPEED
+    else:
+        velocity.x = move_toward(velocity.x, 0.0, GAME_CONSTANTS.WALK_SPEED * 4.0 * delta)
+        velocity.z = move_toward(velocity.z, 0.0, GAME_CONSTANTS.WALK_SPEED * 4.0 * delta)
+    move_and_slide()
+```
+
+- [ ] **Step 4: 写玩家场景**
+
+创建 `game/scenes/player/player.tscn`：
+
+```
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.4
+height = 1.8
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true
+```
+
+- [ ] **Step 5: 运行测试，确认通过**
+
+```bash
+/Volumes/work/repo/nbgame/game/test.sh
+```
+
+预期：`测试完成：通过 44，失败 0`（之前的 38 条 + 玩家场景 6 条）。
+
+- [ ] **Step 6: 提交**
+
+```bash
+cd /Volumes/work/repo/nbgame
+git add game/scripts/player/player_controller.gd game/scenes/player/player.tscn game/tests/test_player_scene.gd
+git commit -m "feat: 添加第一人称玩家场景" -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+```
+
+---
+
+### Task 11: 最小可走场地
+
+**Files:**
+- Create: `game/scenes/main.tscn`（替换之前的试验场景）
+- Create: `game/tests/test_main_scene.gd`
+
+**Interfaces:**
+- Consumes: 玩家场景（Task 10）
+- Produces: 主场景根节点 `Main`，包含 `WorldEnvironment`、`DirectionalLight3D`、`Ground`、四面墙 `WallNorth` / `WallSouth` / `WallEast` / `WallWest` 和 `Player` 实例；场地 30 米见方，玩家出生点 `y = 0.1`，地面顶部在 `y = 0`。
+
+- [ ] **Step 1: 写失败测试**
+
+创建 `game/tests/test_main_scene.gd`：
+
+```gdscript
+extends RefCounted
+
+# 验证最小场地结构：玩家、地面、四面墙、灯光、天空
+func run(t) -> void:
+    var packed: PackedScene = load("res://scenes/main.tscn")
+    t.check(packed != null, "主场景可加载")
+    if packed == null:
+        return
+    var main = packed.instantiate()
+    t.root.add_child(main)
+
+    var player := main.get_node_or_null("Player")
+    t.check(player is CharacterBody3D, "场地里有玩家")
+    if player != null:
+        t.check(player.position.y > 0.0, "玩家出生点在地面之上")
+
+    t.check(main.get_node_or_null("Ground") is StaticBody3D, "场地有地面")
+    t.check(main.get_node_or_null("Ground/CollisionShape3D") is CollisionShape3D, "地面有碰撞体")
+    t.check(main.get_node_or_null("DirectionalLight3D") is DirectionalLight3D, "场地有灯光")
+    t.check(main.get_node_or_null("WorldEnvironment") is WorldEnvironment, "场地有天空环境")
+
+    for wall_name in ["WallNorth", "WallSouth", "WallEast", "WallWest"]:
+        t.check(main.get_node_or_null(wall_name) is StaticBody3D, "有墙体: " + wall_name)
+        t.check(
+            main.get_node_or_null(wall_name + "/CollisionShape3D") is CollisionShape3D,
+            "墙体有碰撞体: " + wall_name
+        )
+
+    main.free()
+```
+
+- [ ] **Step 2: 运行测试，确认失败**
+
+```bash
+/Volumes/work/repo/nbgame/game/test.sh
+echo "退出码: $?"
+```
+
+预期：当前 `main.tscn` 还是之前的试验场景，会出现“场地里有玩家”“地面有碰撞体”等多项失败，退出码 1。
+
+- [ ] **Step 3: 写主场景**
+
+用以下内容替换 `game/scenes/main.tscn`：
+
+```
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky")
+tonemap_mode = 2
+
+[sub_resource type="BoxShape3D" id="GroundShape"]
+size = Vector3(30, 1, 30)
+
+[sub_resource type="BoxMesh" id="GroundMesh"]
+size = Vector3(30, 1, 30)
+
+[sub_resource type="StandardMaterial3D" id="GroundMat"]
+albedo_color = Color(0.42, 0.52, 0.42, 1)
+
+[sub_resource type="BoxShape3D" id="WallShape"]
+size = Vector3(30, 4, 1)
+
+[sub_resource type="BoxMesh" id="WallMesh"]
+size = Vector3(30, 4, 1)
+
+[sub_resource type="StandardMaterial3D" id="WallMat"]
+albedo_color = Color(0.55, 0.55, 0.6, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 8, 0)
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("GroundShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("GroundMesh")
+material_override = SubResource("GroundMat")
+
+[node name="WallNorth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -15)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth"]
+shape = SubResource("WallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WallNorth"]
+mesh = SubResource("WallMesh")
+material_override = SubResource("WallMat")
+
+[node name="WallSouth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 15)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth"]
+shape = SubResource("WallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WallSouth"]
+mesh = SubResource("WallMesh")
+material_override = SubResource("WallMat")
+
+[node name="WallEast" type="StaticBody3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 15, 2, 0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast"]
+shape = SubResource("WallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WallEast"]
+mesh = SubResource("WallMesh")
+material_override = SubResource("WallMat")
+
+[node name="WallWest" type="StaticBody3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -15, 2, 0)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest"]
+shape = SubResource("WallShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="WallWest"]
+mesh = SubResource("WallMesh")
+material_override = SubResource("WallMat")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 10)
+```
+
+- [ ] **Step 4: 运行测试，确认通过**
+
+```bash
+/Volumes/work/repo/nbgame/game/test.sh
+```
+
+预期：`测试完成：通过 59，失败 0`（之前的 44 条 + 场地结构 15 条）。
+
+- [ ] **Step 5: 提交**
+
+```bash
+cd /Volumes/work/repo/nbgame
+git add game/scenes/main.tscn game/tests/test_main_scene.gd
+git commit -m "feat: 添加可走动的第一人称场地" -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+```
+
+---
+
+### Task 12: 运行脚本、画面验收与进度记录
+
+**Files:**
+- Create: `game/run.sh`
 - Modify: `docs/项目进度.md`
 
 **Interfaces:**
 - Consumes: 全部前置任务
-- Produces: 进度文档记录本次完成的地基工作，并明确下一步是玩家与武器。
+- Produces: 王总可以双击/命令运行游戏，用画面验收移动、跳跃和视角；进度文档记录本次完成内容。
 
-- [ ] **Step 1: 跑完整测试套件**
+- [ ] **Step 1: 创建运行脚本**
+
+创建 `game/run.sh`：
+
+```bash
+#!/bin/bash
+# 运行嘉悦云上游戏
+cd "$(dirname "$0")"
+exec /Applications/Godot.app/Contents/MacOS/Godot --path "$PWD" "$@"
+```
+
+运行：
+
+```bash
+chmod +x /Volumes/work/repo/nbgame/game/run.sh
+```
+
+- [ ] **Step 2: 跑完整测试套件**
 
 ```bash
 /Volumes/work/repo/nbgame/game/test.sh
@@ -802,13 +1174,31 @@ echo "退出码: $?"
 预期：
 
 ```
-测试完成：通过 38，失败 0
+测试完成：通过 59，失败 0
 退出码: 0
 ```
 
-同时确认输出里没有 `SCRIPT ERROR` 字样。如果有，先修完再继续。
+确认输出里没有 `SCRIPT ERROR` 字样。如果有，先修完再继续。
 
-- [ ] **Step 2: 检查本次没有意外改动**
+- [ ] **Step 3: 运行游戏，交给王总试玩验收**
+
+```bash
+/Volumes/work/repo/nbgame/game/run.sh
+```
+
+请王总按以下步骤测试，发现问题先截图（`Cmd+Shift+4`），终端有红字就复制给我：
+
+1. 游戏窗口打开后点击一下窗口，鼠标应该消失（被捕获）。
+2. 移动鼠标：左右转视角方向要跟手的移动方向一致；上下看时，鼠标上移应该抬头、下移应该低头。
+3. 按 `W` 向前走、`S` 后退、`A` 左移、`D` 右移；松开按键后应该停下。
+4. 按空格跳跃，落地后不卡住；走到墙边会被挡住，不会穿墙。
+5. 走进场地边缘不会掉出地面。
+6. 按 `Esc` 鼠标应该重新出现；再点击窗口，鼠标重新被捕获，且这一下不会让角色乱动。
+7. 整体视角不晕、移动速度不飘，记下哪里需要调（速度、跳跃高度、灵敏度都可以改）。
+
+本次还扔不了东西，也没有敌人和屏幕 UI，属于正常现象。
+
+- [ ] **Step 4: 检查本次没有意外改动**
 
 ```bash
 cd /Volumes/work/repo/nbgame
@@ -817,18 +1207,19 @@ git status --short
 
 预期：只有 `docs/项目进度.md` 是未提交状态，没有其他意外文件。
 
-- [ ] **Step 3: 更新进度文档**
+- [ ] **Step 5: 更新进度文档**
 
-在 `docs/项目进度.md` 的“功能清单”表格中，在“Unity 残留清理”行后面插入一行：
+在 `docs/项目进度.md` 的“功能清单”表格中，在“Unity 残留清理”行后面插入两行：
 
 ```
 | ✅ | 工程地基 | 自动化测试框架、游戏常量、六个输入动作 | 2026-10-18 |
+| ✅ | 可视化移动验收 | 第一人称视角 + 可走动的 30 米场地 | 2026-10-18 |
 ```
 
 把“当前状态”改成：
 
 ```
-- 🟢 **项目阶段**：工程地基已完成（测试框架、常量、输入），准备开始玩家与武器开发
+- 🟢 **项目阶段**：可视化地基已完成（能看、能走、能跳），下一步做投掷武器和靶子
 ```
 
 把待办清单中的“编写 Godot 版实现计划”勾上：
@@ -837,19 +1228,19 @@ git status --short
 - [x] 编写 Godot 版实现计划
 ```
 
-- [ ] **Step 4: 提交进度**
+- [ ] **Step 6: 提交进度**
 
 ```bash
 cd /Volumes/work/repo/nbgame
-git add docs/项目进度.md
-git commit -m "docs: 更新工程地基完成进度" -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+git add game/run.sh docs/项目进度.md
+git commit -m "docs: 记录可视化移动验收完成" -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
 ```
 
 ---
 
 ## 自检结果
 
-- **规格覆盖**：测试框架（Task 1、2）、移动/生命/能量常量（Task 3、4）、六个输入动作及其键位（Task 5-8）、重复调用安全（Task 9）、进度记录（Task 10）。本次明确不涉及场景、玩家、武器和 HUD。
-- **占位符检查**：所有代码、命令、预期输出均完整写出，没有 TBD/TODO，没有“参考 Task N”的占位写法。
-- **类型一致性**：`GameConstants` 的常量名、`InputSetup` 的动作名常量与 `ensure_actions()` 签名在各任务中保持一致；测试统一通过 `preload` 引用，不依赖全局类名缓存。
-- **Review Focus 对应测试**：假绿（Task 1 退出码验证）、重复绑定（Task 9）、动作名统一（动作名常量）、物理键位（Task 5、6）、任意目录运行（Task 2）。
+- **规格覆盖**：测试框架（Task 1、2）、移动/生命/能量常量（Task 3、4）、六个输入动作及其键位（Task 5-8）、重复调用安全（Task 9）、玩家第一人称移动（Task 10）、可走场地（Task 11）、画面验收（Task 12）。本次明确不涉及投掷、敌人、生命值显示和 HUD。
+- **占位符检查**：所有代码、场景、命令、预期输出均完整写出，没有 TBD/TODO，没有“参考 Task N”的占位写法。
+- **类型一致性**：`GameConstants` 的常量名、`InputSetup` 的动作名常量与 `ensure_actions()` 签名在各任务中保持一致；测试和玩家脚本统一通过 `preload` 引用，不依赖全局类名缓存。
+- **Review Focus 对应测试**：假绿（Task 1 退出码验证）、玩家掉出地面（Task 11 出生点与地面碰撞体检查 + Task 12 试玩）、鼠标方向（Task 12 试玩）、重复绑定（Task 9）、物理键位（Task 5、6）。
