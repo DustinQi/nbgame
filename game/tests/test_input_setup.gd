@@ -22,3 +22,5 @@ func run(t) -> void:
     INPUT_SETUP.ensure_actions()
     _check_key_action(t, INPUT_SETUP.ACTION_MOVE_FORWARD, KEY_W)
     _check_key_action(t, INPUT_SETUP.ACTION_MOVE_BACK, KEY_S)
+    _check_key_action(t, INPUT_SETUP.ACTION_MOVE_LEFT, KEY_A)
+    _check_key_action(t, INPUT_SETUP.ACTION_MOVE_RIGHT, KEY_D)
