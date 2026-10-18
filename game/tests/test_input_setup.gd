@@ -31,6 +31,29 @@ func _check_mouse_action(t, action: StringName, expected_button: MouseButton) ->
     if mouse_event != null:
         t.check_equal(mouse_event.button_index, expected_button, "鼠标键正确: " + String(action))
 
+# 检查一个动作只有一个绑定（用于重复初始化验证）
+func _check_single_binding(t, action: StringName) -> void:
+    t.check_equal(InputMap.action_get_events(action).size(), 1, "重复初始化不重复绑定: " + String(action))
+
+# 已有自定义绑定时，重复初始化不能追加或覆盖它
+func _check_preserves_existing_binding(t, action: StringName, custom_button: MouseButton) -> void:
+    InputMap.action_erase_events(action)
+    var custom := InputEventMouseButton.new()
+    custom.button_index = custom_button
+    InputMap.action_add_event(action, custom)
+    INPUT_SETUP.ensure_actions()
+    var events := InputMap.action_get_events(action)
+    t.check_equal(events.size(), 1, "已有动作不会被追加绑定: " + String(action))
+    if events.size() == 1:
+        var mouse_event := events[0] as InputEventMouseButton
+        t.check(
+            mouse_event != null and mouse_event.button_index == custom_button,
+            "已有绑定不会被覆盖: " + String(action)
+        )
+    # 恢复默认绑定，避免影响其他测试
+    InputMap.erase_action(action)
+    INPUT_SETUP.ensure_actions()
+
 # 验证前进和后退动作
 func run(t) -> void:
     INPUT_SETUP.ensure_actions()
@@ -40,3 +63,12 @@ func run(t) -> void:
     _check_key_action(t, INPUT_SETUP.ACTION_MOVE_RIGHT, KEY_D)
     _check_key_action(t, INPUT_SETUP.ACTION_JUMP, KEY_SPACE)
     _check_mouse_action(t, INPUT_SETUP.ACTION_THROW, MOUSE_BUTTON_LEFT)
+    # 玩家脚本的 _ready() 也会调用 ensure_actions，重复调用不能重复绑定
+    INPUT_SETUP.ensure_actions()
+    _check_single_binding(t, INPUT_SETUP.ACTION_MOVE_FORWARD)
+    _check_single_binding(t, INPUT_SETUP.ACTION_MOVE_BACK)
+    _check_single_binding(t, INPUT_SETUP.ACTION_MOVE_LEFT)
+    _check_single_binding(t, INPUT_SETUP.ACTION_MOVE_RIGHT)
+    _check_single_binding(t, INPUT_SETUP.ACTION_JUMP)
+    _check_single_binding(t, INPUT_SETUP.ACTION_THROW)
+    _check_preserves_existing_binding(t, INPUT_SETUP.ACTION_THROW, MOUSE_BUTTON_RIGHT)

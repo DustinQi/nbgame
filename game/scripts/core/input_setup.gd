@@ -20,6 +20,8 @@ static func ensure_actions() -> void:
 
 # 用物理键位绑定，保证非 QWERTY 键盘布局下位置不变
 static func _add_key(action: StringName, keycode: Key) -> void:
+    if InputMap.has_action(action):
+        return
     InputMap.add_action(action)
     var event := InputEventKey.new()
     event.physical_keycode = keycode
@@ -27,6 +29,8 @@ static func _add_key(action: StringName, keycode: Key) -> void:
 
 # 鼠标按键绑定
 static func _add_mouse(action: StringName, mouse_button: MouseButton) -> void:
+    if InputMap.has_action(action):
+        return
     InputMap.add_action(action)
     var event := InputEventMouseButton.new()
     event.button_index = mouse_button
