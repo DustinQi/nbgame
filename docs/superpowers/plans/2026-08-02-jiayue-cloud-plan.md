@@ -1,4 +1,6 @@
-# 嘉悦云上 — 实现计划
+# 嘉悦云上 — 实现计划（Unity 版，已废弃）
+
+> ⚠️ **已废弃（2026-10-18）：** 开发引擎已切换为 Godot，本计划中的 Unity/C# 内容不再执行。Godot 版实现计划见同目录的 `2026-10-18-jiayue-cloud-godot-plan.md`（撰写中）。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
