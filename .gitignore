@@ -1,11 +1,2 @@
 everything-claude-code/
 .superpowers/
-
-# Unity generated
-Library/
-Logs/
-Temp/
-UserSettings/
-*.csproj
-*.sln
-.vsconfig
