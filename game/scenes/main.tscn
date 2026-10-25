@@ -1,6 +1,8 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=13 format=3]
 
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/level/arena.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/target_dummy.tscn" id="3"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 
@@ -30,7 +32,8 @@ size = Vector3(30, 4, 1)
 [sub_resource type="StandardMaterial3D" id="WallMat"]
 albedo_color = Color(0.55, 0.55, 0.6, 1)
 
-[node name="Main" type="Node3D"]
+[node name="Main" type="Node3D" groups=["arena"]]
+script = ExtResource("1")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env")
@@ -100,5 +103,14 @@ shape = SubResource("WallShape")
 mesh = SubResource("WallMesh")
 material_override = SubResource("WallMat")
 
-[node name="Player" parent="." instance=ExtResource("1")]
+[node name="Player" parent="." instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 10)
+
+[node name="Dummy1" parent="." instance=ExtResource("3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6)
+
+[node name="Dummy2" parent="." instance=ExtResource("3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -10)
+
+[node name="Dummy3" parent="." instance=ExtResource("3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -10)
