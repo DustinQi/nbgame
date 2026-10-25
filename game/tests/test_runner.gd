@@ -5,6 +5,11 @@ var _passed := 0
 var _failed := 0
 
 func _initialize() -> void:
+    # _initialize 阶段场景树还未 ready，此时 add_child 的节点 _ready 会被推迟，
+    # 而 -s 模式跑不到帧循环，导致 _ready 永远不执行。改为第一帧再跑测试。
+    process_frame.connect(_run_all_tests, CONNECT_ONE_SHOT)
+
+func _run_all_tests() -> void:
     var files := _collect_test_files()
     if files.is_empty():
         push_error("没有找到任何测试文件")
