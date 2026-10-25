@@ -4,11 +4,15 @@ extends CharacterBody3D
 # 用 preload 引用常量和输入脚本，避免依赖全局类名缓存
 const GAME_CONSTANTS = preload("res://scripts/core/game_constants.gd")
 const INPUT_SETUP = preload("res://scripts/core/input_setup.gd")
+const PLAYER_STATS = preload("res://scripts/player/player_stats.gd")
 
 const PITCH_MIN := -1.45
 const PITCH_MAX := 1.45
 
 @onready var camera: Camera3D = get_node_or_null("Head/Camera3D") as Camera3D
+
+# 玩家属性对象在实例化时就创建，保证 HUD 随时能连接信号
+var stats = PLAYER_STATS.new()
 
 var _pitch := 0.0
 
